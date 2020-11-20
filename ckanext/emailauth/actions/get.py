@@ -3,6 +3,7 @@ import logging
 import ckan.logic as logic
 import ckan.logic.action.get as user_get
 import ckanext.emailauth.user_extra_model as user_extra_model
+from ckan.model.user import User
 
 log = logging.getLogger(__name__)
 NotFound = logic.NotFound
@@ -13,6 +14,15 @@ def user_show(context, data_dict):
     user_dict = user_get.user_show(context, data_dict)
     # TODO: Ability to add custom user_dict values here for user show
     return user_dict
+
+
+@logic.side_effect_free
+def user_email_show(context, data_dict):
+    user_dict = User.by_email(data_dict['id'])
+    if len(user_dict) >= 1:
+        return user_dict[0].name
+    else:
+        raise NotFound
 
 
 @logic.side_effect_free

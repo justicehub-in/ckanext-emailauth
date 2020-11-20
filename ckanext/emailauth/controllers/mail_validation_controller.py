@@ -8,6 +8,8 @@ import string
 
 import dateutil
 from pylons import config
+from validate_email import validate_email
+from urlparse import urljoin
 
 import ckan.controllers.user
 import ckan.lib.base as base
@@ -174,7 +176,7 @@ class ValidationController(ckan.controllers.user.UserController):
                    'schema': temp_schema, 'save': 'save' in request.params}
 
         if 'email' in data_dict:
-            if 'name' not in data_dict or not data['name']:
+            if 'name' not in data_dict or not data_dict['name']:
                 data_dict['name'] = self._generate_name(data_dict['fullname'])
         context['message'] = data_dict.get('log_message', '')
 
@@ -183,11 +185,10 @@ class ValidationController(ckan.controllers.user.UserController):
             check_access('user_can_register', context, data_dict)
         except NotAuthorized, e:
             if e.args and len(e.args):
-                return self.error_message(self._get_exc_msg_by_key(e, 'email'))
+                return self.error_message(self._get_exc_msg_by_key(e, ['email', 'name', 'password'])[0])
             return NotAuthorizedStatus
         except ValidationError, e:
-            # errors = e.error_dict
-            if e and e.error_summmary:
+            if e and e.error_summary:
                 error_summary = e.error_summary
             else:
                 error_summary = ['Email address is not valid. Please contact our team.']
@@ -219,8 +220,9 @@ class ValidationController(ckan.controllers.user.UserController):
 
         if not c.user:
             # Send validation email
+            reset_link = urljoin(config.get('ckan.site_url'), "/user/validate/" + token['token'])
             mail = Mail.new()
-            mail.send(user['email'], "Please verify your account", {'token': token['token']})
+            mail.send(user['email'], "Please verify your account", {'token': reset_link})
 
         c.user = save_user
 
@@ -240,10 +242,11 @@ class ValidationController(ckan.controllers.user.UserController):
             return NotAuthorizedStatus
 
     def _get_exc_msg_by_key(self, e, key):
-        if e and e.args:
-            for arg in e.args:
-                if key in arg:
-                    return arg[key]
+        for k in key:
+            if e and e.args:
+                for arg in e.args:
+                    if k in arg:
+                        return arg[k]
         return None
 
     def validate(self, token):
@@ -261,6 +264,7 @@ class ValidationController(ckan.controllers.user.UserController):
             template_data['data']['message'] = e.error_summary
             return render(TEMPLATES['home'], extra_vars=template_data)
 
+        # TODO: It should redirect, much better
         return render(TEMPLATES['home'], extra_vars=template_data)
 
 
@@ -333,6 +337,11 @@ class ValidationController(ckan.controllers.user.UserController):
 
             user_obj = None
             try:
+                is_valid = validate_email(user_id)
+
+                # TODO: Move it with user_show, possibility
+                if is_valid:
+                    user_id = get_action('user_email_show')(context, {'id': user_id})
                 data_dict = get_action('user_show')(context, {'id': user_id})
                 user_obj = context['user_obj']
             except NotFound:
@@ -347,13 +356,14 @@ class ValidationController(ckan.controllers.user.UserController):
             # TODO: Send validation email
             if not token['valid']:
                 if user_obj:
+                    reset_link = urljoin(config.get('ckan.site_url'), "/user/validate/" + token['token'])
                     mail = Mail.new()
-                    mail.send(user_obj.email, "Please verify your account", {'token': token['token']})
+                    mail.send(user_obj.email, "Please verify your account", {'token': reset_link})
                     return SuccessStatus
                 return ErrorStatus
             if user_obj:
                 try:
-                    get_action('send_reset_link')(context, {'id': user_id})
+                    get_action('send_reset_link')(context, {'id': data_dict.get('id')})
                     return SuccessStatus
                 except:
                     return ResetLinkErrorStatus

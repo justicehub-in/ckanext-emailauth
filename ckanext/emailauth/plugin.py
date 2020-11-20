@@ -68,7 +68,8 @@ class EmailAuthPlugin(plugins.SingletonPlugin):
             'send_reset_link': update.send_reset_link,
             'user_extra_create': create.user_extra_create,
             'user_extra_show': get.user_extra_show,
-            'user_extra_update': update.user_extra_update
+            'user_extra_update': update.user_extra_update,
+            'user_email_show': get.user_email_show
         }
 
     def get_auth_functions(self):
