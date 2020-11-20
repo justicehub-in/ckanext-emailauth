@@ -47,8 +47,7 @@ To install ckanext-emailauth:
    config file (by default the config file is located at
    ``/etc/ckan/default/production.ini``).
 
-4. Follow configuration step below to add necessary details
-
+4. Follow configuration step below to add necessary details and then do Database Initialization
 
 5. Restart CKAN. For example if you've deployed CKAN with Apache on Ubuntu::
 
@@ -67,6 +66,14 @@ ckanext-emailauth has few custom configuration which is required before running:
       # Optional
       password.reset_key.expiry_hours=4
 
+-----------------------------
+Database Initialization
+-----------------------------
+
+ckanext-emailauth requires two custom table which needs to be initialized. Change directory inside ``ckanext-emailauth``::
+
+      paster user_validation initdb -c development.ini
+      paster user_extra initdb -c development.ini
 
 ----------------------------
 Modifying Authenticator
