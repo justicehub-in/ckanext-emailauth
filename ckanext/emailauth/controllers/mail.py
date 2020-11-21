@@ -1,6 +1,5 @@
 from abc import abstractmethod
 from ckan.plugins import toolkit
-import pylons.config as config
 from ckan.lib.mailer import MailerException
 from email.header import Header
 from email.mime.text import MIMEText
@@ -19,7 +18,7 @@ class Mail(object):
         """
         Mail object as Interface
         """
-        self.site_url = config['ckan.site_url']
+        self.site_url = toolkit.config.get(u'ckan.site_url')
         self.user_key = toolkit.config.get(u'ckan.mail.key')
         self.user_secret = toolkit.config.get(u'ckan.mail.secret')
         self.sent_from = toolkit.config.get(u'ckan.mail.sent_from')
@@ -50,7 +49,7 @@ class GoogleMail(Mail):
 
     def send(self, to, subject, email_data, snippet='email/base.html', footer=True, logo=True):
         # TODO: Create constant and make logo path configurable
-        email_data['logo'] = config.get('ckan.site_url') + '/assets/jh_logo.png'
+        email_data['logo'] = toolkit.config.get(u'ckan.site_url') + '/assets/jh_logo.png'
         email_data['footer'] = footer
 
         body_html = mailer.render_jinja2(snippet, email_data)
@@ -70,7 +69,7 @@ class GoogleMail(Mail):
             server.login(self.user_key, self.user_secret)
             server.sendmail(self.sent_from, to, msg.as_string())
             log.info("Sent mail successfully")
-        except smtplib.SMTPException, e:
+        except smtplib.SMTPException as e:
             msg = '%r' % e
             log.exception(msg)
             raise MailerException(msg)

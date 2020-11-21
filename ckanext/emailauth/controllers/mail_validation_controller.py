@@ -2,32 +2,39 @@ import datetime
 import json
 import logging as logging
 import re
-import urllib2 as urllib2
+import sys
 import random
 import string
 
 import dateutil
-from pylons import config
 from validate_email import validate_email
-from urlparse import urljoin
 
-import ckan.controllers.user
 import ckan.lib.base as base
 import ckan.lib.helpers as h
 import ckan.lib.navl.dictization_functions as df
 import ckan.lib.navl.dictization_functions as dictization_functions
 import ckan.logic as logic
 import ckan.model as model
-from ckan.controllers.user import set_repoze_user
+from ckan.plugins import toolkit
+from ckan.views.user import set_repoze_user
 import ckanext.emailauth.helpers.tokens as tokens
 import ckanext.emailauth.helpers.user_extra as ue_helpers
 import ckanext.emailauth.logic.schema as user_reg_schema
 import ckanext.emailauth.model as user_model
 from ckanext.emailauth.controllers.mail import Mail
 from ckanext.emailauth.constants import TEMPLATES
-from ckan.common import _, c, g, request, response
+from ckan.common import _, c, request
 from ckan.logic.validators import name_validator, name_match, PACKAGE_NAME_MAX_LENGTH
 from ckanext.emailauth.authenticator import EmailAuthenticator
+
+
+if sys.version_info[0] > 2:
+    from urllib.parse import urljoin, quote
+    from ckanext.emailauth.constants import UserController
+else:
+    from urlparse import urljoin
+    from urllib2 import quote
+    from ckan.controllers.user import UserController
 
 
 _validate = dictization_functions.validate
@@ -44,18 +51,6 @@ NotAuthorized = logic.NotAuthorized
 unflatten = dictization_functions.unflatten
 
 Invalid = df.Invalid
-LoginFailedStatus = _('Login failed. Bad username or password.')
-NotAuthorizedStatus = json.dumps({'success': False, 'error': {'message': _('Unauthorized to create user')}})
-UserNotFoundStatus= json.dumps({'success': False, 'error': {'message': 'User not found'}})
-ExistingUsernameStatus = json.dumps({'success': False, 'error': {'message': 'Username is already used'}})
-ExistingEmailStatus = json.dumps({'success': False, 'error': {'message': 'Email is already in use'}})
-TokenNotFoundStatus = json.dumps({'success': False, 'error': {'message': 'Token not found'}})
-IntegrityErrorStatus = json.dumps({'success': False, 'error': {'message': 'Integrity Error'}})
-LoginErrorStatus = json.dumps({'success': False, 'error': {'message': LoginFailedStatus}})
-SuccessStatus = json.dumps({'success': True})
-ErrorStatus = json.dumps({'success': False, 'error': {'message': _('Something went wrong. Please contact support.')}})
-ValidationErrorStatus = json.dumps({'success': False, 'error': {'message': _('You have not yet validated your email.')}})
-ResetLinkErrorStatus = json.dumps({'success': False, 'error': {'message': _('Could not send reset link.')}})
 
 
 def name_validator_with_changed_msg(val, context):
@@ -76,8 +71,21 @@ def name_validator_with_changed_msg(val, context):
         raise invalid
 
 
-class ValidationController(ckan.controllers.user.UserController):
-    request_register_form = 'user/request_register.html'
+class ValidationLogic(object):
+    LoginFailedStatus = _('Login failed. Bad username or password.')
+    NotAuthorizedStatus = json.dumps({'success': False, 'error': {'message': _('Unauthorized to create user')}})
+    UserNotFoundStatus = json.dumps({'success': False, 'error': {'message': 'User not found'}})
+    ExistingUsernameStatus = json.dumps({'success': False, 'error': {'message': 'Username is already used'}})
+    ExistingEmailStatus = json.dumps({'success': False, 'error': {'message': 'Email is already in use'}})
+    TokenNotFoundStatus = json.dumps({'success': False, 'error': {'message': 'Token not found'}})
+    IntegrityErrorStatus = json.dumps({'success': False, 'error': {'message': 'Integrity Error'}})
+    LoginErrorStatus = json.dumps({'success': False, 'error': {'message': LoginFailedStatus}})
+    SuccessStatus = json.dumps({'success': True})
+    ErrorStatus = json.dumps(
+        {'success': False, 'error': {'message': _('Something went wrong. Please contact support.')}})
+    ValidationErrorStatus = json.dumps(
+        {'success': False, 'error': {'message': _('You have not yet validated your email.')}})
+    ResetLinkErrorStatus = json.dumps({'success': False, 'error': {'message': _('Could not send reset link.')}})
 
     def upload_flow(self):
         pass
@@ -124,12 +132,13 @@ class ValidationController(ckan.controllers.user.UserController):
                               'email_hash': userobj.email_hash, 'login': userobj.name}
 
                 max_age = int(14 * 24 * 3600)
-                response.set_cookie('platform_login', urllib2.quote(json.dumps(login_dict)), max_age=max_age)
+                # TODO: Remove this, not required
+                # response.set_cookie('platform_login', quote(json.dumps(login_dict)), max_age=max_age)
                 if not c.user:
                     h.redirect_to(locale=None, controller='user', action='login', id=None)
 
                 # TODO: Why trailing slash is required
-                _ckan_site_url = "{}/".format(config.get('ckan.site_url', '#'))
+                _ckan_site_url = "{}/".format(toolkit.config.get('ckan.site_url', '#'))
                 _came_from = str(request.referrer or _ckan_site_url)
 
                 excluded_paths = ['/user/validate/', 'user/logged_in?__logins', 'user/logged_out_redirect']
@@ -183,11 +192,12 @@ class ValidationController(ckan.controllers.user.UserController):
         try:
             check_access('user_create', context, data_dict)
             check_access('user_can_register', context, data_dict)
-        except NotAuthorized, e:
+        except NotAuthorized as e:
             if e.args and len(e.args):
+                # TODO: Give type of error
                 return self.error_message(self._get_exc_msg_by_key(e, ['email', 'name', 'password'])[0])
-            return NotAuthorizedStatus
-        except ValidationError, e:
+            return self.NotAuthorizedStatus
+        except ValidationError as e:
             if e and e.error_summary:
                 error_summary = e.error_summary
             else:
@@ -206,21 +216,21 @@ class ValidationController(ckan.controllers.user.UserController):
                                                                    'extras': ue_helpers.get_initial_extras()})
             # TODO: Mail Subscription
         except NotAuthorized:
-            return NotAuthorizedStatus
-        except NotFound, e:
-            return TokenNotFoundStatus
+            return self.NotAuthorizedStatus
+        except NotFound as e:
+            return self.TokenNotFoundStatus
         except DataError:
-            return IntegrityErrorStatus
-        except ValidationError, e:
+            return self.IntegrityErrorStatus
+        except ValidationError as e:
             error_summary = e.error_summary
             return self.error_message(error_summary)
-        except Exception, e:
+        except Exception as e:
             error_summary = str(e)
             return self.error_message(error_summary)
 
         if not c.user:
             # Send validation email
-            reset_link = urljoin(config.get('ckan.site_url'), "/user/validate/" + token['token'])
+            reset_link = urljoin(toolkit.config.get('ckan.site_url'), "/user/validate/" + token['token'])
             mail = Mail.new()
             mail.send(user['email'], "Please verify your account", {'token': reset_link})
 
@@ -237,9 +247,9 @@ class ValidationController(ckan.controllers.user.UserController):
             # Very Sensitive function
             # Login only if Authenticator allows to do so
             set_repoze_user(data_dict["name"])
-            return SuccessStatus
+            return self.SuccessStatus
         else:
-            return NotAuthorizedStatus
+            return self.NotAuthorizedStatus
 
     def _get_exc_msg_by_key(self, e, key):
         for k in key:
@@ -260,7 +270,7 @@ class ValidationController(ckan.controllers.user.UserController):
         except NotAuthorized:
             template_data['data']['message'] = "User is already Validated"
             return render(TEMPLATES['home'], extra_vars=template_data)
-        except ValidationError, e:
+        except ValidationError as e:
             template_data['data']['message'] = e.error_summary
             return render(TEMPLATES['home'], extra_vars=template_data)
 
@@ -292,7 +302,7 @@ class ValidationController(ckan.controllers.user.UserController):
 
         try:
             user = get_action('user_show')(context, data_dict)
-        except NotFound, e:
+        except NotFound as e:
             abort(404, _('User not found'))
         except:
             abort(500, _('Error'))
@@ -300,7 +310,7 @@ class ValidationController(ckan.controllers.user.UserController):
         # Get token for user
         try:
             token = tokens.token_show(context, data_dict)
-        except NotFound, e:
+        except NotFound as e:
             abort(404, _('User not found'))
         except:
             abort(500, _('Error'))
@@ -345,26 +355,30 @@ class ValidationController(ckan.controllers.user.UserController):
                 data_dict = get_action('user_show')(context, {'id': user_id})
                 user_obj = context['user_obj']
             except NotFound:
-                return UserNotFoundStatus
+                return self.UserNotFoundStatus
             try:
                 token = tokens.token_show(context, data_dict)
-            except NotFound, e:
+            except NotFound:
                 token = {'valid': True}
-            except Exception, ex:
-                return ErrorStatus
+            except Exception:
+                return self.ErrorStatus
 
             # TODO: Send validation email
             if not token['valid']:
                 if user_obj:
-                    reset_link = urljoin(config.get('ckan.site_url'), "/user/validate/" + token['token'])
+                    reset_link = urljoin(toolkit.config.get('ckan.site_url'), "/user/validate/" + token['token'])
                     mail = Mail.new()
                     mail.send(user_obj.email, "Please verify your account", {'token': reset_link})
-                    return SuccessStatus
-                return ErrorStatus
+                    return self.SuccessStatus
+                return self.ErrorStatus
             if user_obj:
                 try:
                     get_action('send_reset_link')(context, {'id': data_dict.get('id')})
-                    return SuccessStatus
+                    return self.SuccessStatus
                 except:
-                    return ResetLinkErrorStatus
+                    return self.ResetLinkErrorStatus
         return render(TEMPLATES['home'])
+
+
+class ValidationController(UserController, ValidationLogic):
+    pass
