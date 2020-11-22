@@ -25,7 +25,7 @@ from ckanext.emailauth.settings import TEMPLATES
 from ckan.common import _, c, request
 from ckan.logic.validators import name_validator, name_match, PACKAGE_NAME_MAX_LENGTH
 from ckanext.emailauth.authenticator import EmailAuthenticator
-from ckanext.emailauth.settings import IS_FLASK_REQUEST
+from ckanext.emailauth.settings import IS_FLASK_REQUEST, BASE_URL
 
 
 if sys.version_info[0] > 2:
@@ -111,7 +111,6 @@ class ValidationLogic(object):
             template_data = ue_helpers.get_login(True, "")
         return render(TEMPLATES["home"], extra_vars=template_data)
 
-
     def logged_in(self):
         came_from = request.params.get('came_from', '')
         if h.url_is_local(came_from):
@@ -140,7 +139,7 @@ class ValidationLogic(object):
                     h.redirect_to(locale=None, controller='user', action='login', id=None)
 
                 # TODO: Why trailing slash is required
-                _ckan_site_url = "{}/".format(toolkit.config.get('ckan.site_url', '#'))
+                _ckan_site_url = "{}/".format(BASE_URL)
                 _came_from = str(request.referrer or _ckan_site_url)
 
                 excluded_paths = ['/user/validate/', 'user/logged_in?__logins', 'user/logged_out_redirect']
@@ -237,7 +236,7 @@ class ValidationLogic(object):
 
         if not c.user:
             # Send validation email
-            reset_link = urljoin(toolkit.config.get('ckan.site_url'), "/user/validate/" + token['token'])
+            reset_link = urljoin(BASE_URL, "/user/validate/" + token['token'])
             mail = Mail.new()
             mail.send(user['email'], "Please verify your account", {'token': reset_link})
 
@@ -294,7 +293,6 @@ class ValidationLogic(object):
         # TODO: It should redirect, much better
         return render(TEMPLATES['home'], extra_vars=template_data)
 
-
     def register(self, data=None, errors=None, error_summary=None):
         context = {'model': model, 'session': model.Session, 'user': c.user}
         try:
@@ -308,7 +306,6 @@ class ValidationLogic(object):
         if not c.user:
             template_data = ue_helpers.get_register(True, "")
         return render(TEMPLATES["home"], extra_vars=template_data)
-
 
     def validation_resend(self, id):
         context = {'model': model, 'session': model.Session,
@@ -384,7 +381,7 @@ class ValidationLogic(object):
             # TODO: Send validation email
             if not token['valid']:
                 if user_obj:
-                    reset_link = urljoin(toolkit.config.get('ckan.site_url'), "/user/validate/" + token['token'])
+                    reset_link = urljoin(BASE_URL, "/user/validate/" + token['token'])
                     mail = Mail.new()
                     mail.send(user_obj.email, "Please verify your account", {'token': reset_link})
                     return self.SuccessStatus

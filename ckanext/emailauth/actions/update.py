@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 import sys
-from ckan.plugins import toolkit
+from ckanext.emailauth.settings import PASSWORD_RESET_EXPIRY, BASE_URL
 
 import ckan.logic as logic
 import ckanext.emailauth.model as umodel
@@ -47,13 +47,13 @@ def send_reset_link(context, data_dict):
         if user is None:
             raise NotFound
 
-    expiration_in_hours = int(toolkit.config.get('password.reset_key.expiry_hours', 3))
+    expiration_in_hours = PASSWORD_RESET_EXPIRY
     if user:
         reset_password.create_reset_key(user, expiration_in_hours)
 
         recipient_mail = user.email if user.email else None
         user_fullname = user.fullname or ''
-        reset_link = urljoin(toolkit.config.get('ckan.site_url'),
+        reset_link = urljoin(BASE_URL,
                              h.url_for(controller='user', action='perform_reset', id=user.id, key=user.reset_key))
 
     email_data = {

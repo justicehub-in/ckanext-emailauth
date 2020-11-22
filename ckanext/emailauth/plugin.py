@@ -7,7 +7,7 @@ import ckanext.emailauth.logic.validators as validators
 import ckanext.emailauth.model as users_model
 import ckanext.emailauth.user_extra_model as user_extra_model
 from ckanext.emailauth import blueprint
-from ckanext.emailauth.settings import BLUEPRINT
+from ckanext.emailauth.settings import BLUEPRINT, IS_FLASK_REQUEST
 
 import ckan.plugins as plugins
 import ckan.plugins.toolkit as toolkit
@@ -20,8 +20,7 @@ class EmailAuthPlugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IActions)
     plugins.implements(plugins.IAuthFunctions)
     plugins.implements(plugins.IValidators)
-    if plugins.toolkit.check_ckan_version(min_version='2.9.0'):
-        print("CKAN Version 2.9+")
+    if IS_FLASK_REQUEST:
         plugins.implements(plugins.IBlueprint)
 
     def update_config(self, config):
