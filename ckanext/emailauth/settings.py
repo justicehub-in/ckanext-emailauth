@@ -1,5 +1,8 @@
+import ckan.plugins as plugins
+
+
 TEMPLATES = {
-    "home": "home/index.html"
+    "home": "home/index.html",
 }
 
 BLUEPRINT = {
@@ -34,6 +37,13 @@ BLUEPRINT = {
          'type': [u'GET']}
     ]
 }
+
+IS_FLASK_REQUEST = False
+
+_version_status = plugins.toolkit.check_ckan_version(min_version='2.9.0')
+if _version_status:
+    print("FLASK Request")
+    IS_FLASK_REQUEST = True
 
 
 # Temporary UserController

@@ -1,6 +1,6 @@
 from flask import Blueprint
 import ckan.plugins as plugins
-from ckanext.emailauth.constants import BLUEPRINT
+from ckanext.emailauth.settings import BLUEPRINT
 
 _version_status = plugins.toolkit.check_ckan_version(min_version='2.9.0')
 emailauth = Blueprint(u'emailauth', __name__)

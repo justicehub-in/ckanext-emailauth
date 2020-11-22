@@ -7,7 +7,7 @@ import ckanext.emailauth.logic.validators as validators
 import ckanext.emailauth.model as users_model
 import ckanext.emailauth.user_extra_model as user_extra_model
 from ckanext.emailauth import blueprint
-from ckanext.emailauth.constants import BLUEPRINT
+from ckanext.emailauth.settings import BLUEPRINT
 
 import ckan.plugins as plugins
 import ckan.plugins.toolkit as toolkit

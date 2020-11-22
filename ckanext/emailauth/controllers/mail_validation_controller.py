@@ -16,25 +16,27 @@ import ckan.lib.navl.dictization_functions as dictization_functions
 import ckan.logic as logic
 import ckan.model as model
 from ckan.plugins import toolkit
-from ckan.views.user import set_repoze_user
 import ckanext.emailauth.helpers.tokens as tokens
 import ckanext.emailauth.helpers.user_extra as ue_helpers
 import ckanext.emailauth.logic.schema as user_reg_schema
 import ckanext.emailauth.model as user_model
 from ckanext.emailauth.controllers.mail import Mail
-from ckanext.emailauth.constants import TEMPLATES
+from ckanext.emailauth.settings import TEMPLATES
 from ckan.common import _, c, request
 from ckan.logic.validators import name_validator, name_match, PACKAGE_NAME_MAX_LENGTH
 from ckanext.emailauth.authenticator import EmailAuthenticator
+from ckanext.emailauth.settings import IS_FLASK_REQUEST
 
 
 if sys.version_info[0] > 2:
     from urllib.parse import urljoin, quote
-    from ckanext.emailauth.constants import UserController
+    from ckanext.emailauth.settings import UserController
+    from flask import make_response
 else:
     from urlparse import urljoin
     from urllib2 import quote
     from ckan.controllers.user import UserController
+    from ckan.common import response
 
 
 _validate = dictization_functions.validate
@@ -150,7 +152,8 @@ class ValidationLogic(object):
         else:
             err = _('Login failed. Bad username or password.')
 
-            template_data = ue_helpers.get_login(False, err)
+            template_data = ue_helpers.get_login(False)
+            h.flash_success(err)
             log.error("Status code 401 : username or password incorrect")
             return render(TEMPLATES['home'], extra_vars=template_data)
 
@@ -173,7 +176,11 @@ class ValidationLogic(object):
 
     def register_email(self, data=None, errors=None, error_summary=None):
 
-        data_dict = logic.clean_dict(unflatten(logic.tuplize_dict(logic.parse_params(request.params))))
+        if IS_FLASK_REQUEST:
+            request_data = request.form
+        else:
+            request_data = request.params
+        data_dict = logic.clean_dict(unflatten(logic.tuplize_dict(logic.parse_params(request_data))))
 
         # TODO: Add Captcha feature here
 
@@ -194,15 +201,15 @@ class ValidationLogic(object):
             check_access('user_can_register', context, data_dict)
         except NotAuthorized as e:
             if e.args and len(e.args):
-                # TODO: Give type of error
-                return self.error_message(self._get_exc_msg_by_key(e, ['email', 'name', 'password'])[0])
+                message, error_type = self._get_exc_msg_by_key(e, ['email', 'name', 'password', 'fullname'])
+                return self.error_message(message, error_type)
             return self.NotAuthorizedStatus
         except ValidationError as e:
             if e and e.error_summary:
                 error_summary = e.error_summary
             else:
                 error_summary = ['Email address is not valid. Please contact our team.']
-            return self.error_message(error_summary)
+            return self.error_message(error_summary, type='email')
 
         # Assuming that user is not logged in
         save_user = c.user
@@ -246,8 +253,18 @@ class ValidationLogic(object):
         if login_status == data_dict['name']:
             # Very Sensitive function
             # Login only if Authenticator allows to do so
-            set_repoze_user(data_dict["name"])
-            return self.SuccessStatus
+            if u'repoze.who.plugins' in request.environ:
+                rememberer = request.environ[u'repoze.who.plugins'][u'friendlyform']
+                identity = {u'repoze.who.userid': data_dict["name"]}
+                user_token = rememberer.remember(request.environ, identity)
+                if IS_FLASK_REQUEST:
+                    resp = make_response((self.SuccessStatus, 200, {}))
+                    resp.headers.extend(user_token)
+                else:
+                    response.headerlist += user_token
+                    resp = self.SuccessStatus
+                return resp
+            return self.IntegrityErrorStatus
         else:
             return self.NotAuthorizedStatus
 
@@ -256,7 +273,7 @@ class ValidationLogic(object):
             if e and e.args:
                 for arg in e.args:
                     if k in arg:
-                        return arg[k]
+                        return arg[k] + [k]
         return None
 
     def validate(self, token):
@@ -325,8 +342,9 @@ class ValidationLogic(object):
             post_register_url,
             user['id']))
 
-    def error_message(self, error_summary):
-        return json.dumps({'success': False, 'error': {'message': error_summary}})
+    def error_message(self, error_summary, type=None):
+        return json.dumps({'success': False, 'error': {'message': error_summary},
+                           'type': type})
 
     def request_reset(self):
         """
