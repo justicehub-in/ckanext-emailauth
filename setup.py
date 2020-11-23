@@ -86,6 +86,9 @@ setup(
         user_validation = ckanext.emailauth.command:ValidationCommand
         user_extra = ckanext.emailauth.command:UserExtraCommand
 
+        [ckan.click_command]
+        user_validation = ckanext.emailauth.cli:user_validation
+        user_extra = ckanext.emailauth.cli:user_extra
     ''',
 
     # If you are changing from the default layout of your extension, you may

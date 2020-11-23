@@ -6,6 +6,8 @@ import ckanext.emailauth.logic.register_auth as authorize
 import ckanext.emailauth.logic.validators as validators
 import ckanext.emailauth.model as users_model
 import ckanext.emailauth.user_extra_model as user_extra_model
+from ckanext.emailauth import blueprint
+from ckanext.emailauth.settings import BLUEPRINT, IS_FLASK_REQUEST
 
 import ckan.plugins as plugins
 import ckan.plugins.toolkit as toolkit
@@ -18,6 +20,8 @@ class EmailAuthPlugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IActions)
     plugins.implements(plugins.IAuthFunctions)
     plugins.implements(plugins.IValidators)
+    if IS_FLASK_REQUEST:
+        plugins.implements(plugins.IBlueprint)
 
     def update_config(self, config):
         toolkit.add_template_directory(config, 'templates')
@@ -28,34 +32,14 @@ class EmailAuthPlugin(plugins.SingletonPlugin):
     def is_fallback(self):
         return False
 
+    def get_blueprint(self):
+        return blueprint.emailauth
+
     def before_map(self, map):
-        map.connect('/user/register',
-                    controller='ckanext.emailauth.controllers.mail_validation_controller:ValidationController',
-                    action='register')
-        map.connect('/user/register_email',
-                    controller='ckanext.emailauth.controllers.mail_validation_controller:ValidationController',
-                    action='register_email')
-        map.connect('/user/validate/{token}',
-                    controller='ckanext.emailauth.controllers.mail_validation_controller:ValidationController',
-                    action='validate')
-        map.connect('/user/validation_resend/{id}',
-                    controller='ckanext.emailauth.controllers.mail_validation_controller:ValidationController',
-                    action="validation_resend")
-        map.connect('/user/logged_out_page',
-                    controller='ckanext.emailauth.controllers.mail_validation_controller:ValidationController',
-                    action='logged_out_page')
-        map.connect('/user/reset',
-                    controller='ckanext.emailauth.controllers.mail_validation_controller:ValidationController',
-                    action='request_reset')
-        map.connect('/user/logged_out_redirect',
-                    controller='ckanext.emailauth.controllers.mail_validation_controller:ValidationController',
-                    action='logged_out_page')
-        map.connect('/user/logged_in',
-                    controller='ckanext.emailauth.controllers.mail_validation_controller:ValidationController',
-                    action='logged_in')
-        map.connect('/login',
-                    controller='ckanext.emailauth.controllers.mail_validation_controller:ValidationController',
-                    action='new_login')
+        for action in BLUEPRINT['actions']:
+            map.connect(action['url'],
+                        controller=BLUEPRINT['controller'],
+                        action=action['name'])
         return map
 
     def after_map(self, map):

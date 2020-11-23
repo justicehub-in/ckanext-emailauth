@@ -1,13 +1,13 @@
 import logging
 
 import sqlalchemy.orm as orm
-from sqlalchemy.schema import Table, Column, UniqueConstraint, ForeignKey, CreateTable
+from sqlalchemy.schema import Table, Column, ForeignKey
 import sqlalchemy.types as types
 
 import ckan.model as model
 from ckan.model.domain_object import DomainObject
 
-from ckan.model import meta, extension, core, user
+from ckan.model import meta, extension
 import ckan.model.types as _types
 
 mapper = orm.mapper

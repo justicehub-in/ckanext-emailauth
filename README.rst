@@ -19,7 +19,7 @@ ckanext-emailauth allows you to:
 Requirements
 ------------
 
-Tested with Python 2.7 with CKAN 2.8.4
+Supports Python 2.7 and Python 3.8, tested with CKAN 2.8.4 / CKAN 2.9.1
 
 ------------
 Installation
@@ -70,10 +70,17 @@ ckanext-emailauth has few custom configuration which is required before running:
 Database Initialization
 -----------------------------
 
-ckanext-emailauth requires two custom table which needs to be initialized. Change directory inside ``ckanext-emailauth``::
+ckanext-emailauth requires two custom table which needs to be initialized. Change directory inside ``ckanext-emailauth``:
 
-      paster user_validation initdb -c development.ini
-      paster user_extra initdb -c development.ini
+If you are using CKAN 2.8 or less::
+
+      paster user_validation initdb -c /path/to/development.ini
+      paster user_extra initdb -c /path/to/development.ini
+
+For CKAN 2.9 or greater::
+
+      ckan -c /path/to/ckan.ini user_validation initdb
+      ckan -c /path/tp/ckan.ini user_extra initdb
 
 ----------------------------
 Modifying Authenticator
@@ -100,3 +107,13 @@ do::
     cd ckanext-emailauth
     python setup.py develop
 
+------------------------
+Future of this plugin?
+------------------------
+
+Right now it's mostly focused on being by ``ckanext-justicehub_theme`` and it's hard to generalize it for normal usage.
+Few challenges are:
+
+1. Popup based authentication responses
+2. Schema is fixed right now but it should be configurable
+3. Templates are hardcoded based on theme usage

@@ -1,6 +1,5 @@
 from abc import abstractmethod
 from ckan.plugins import toolkit
-import pylons.config as config
 from ckan.lib.mailer import MailerException
 from email.header import Header
 from email.mime.text import MIMEText
@@ -9,6 +8,10 @@ import ckan.lib.mailer as mailer
 import logging
 import smtplib
 from ckan.common import _
+from ckanext.emailauth.settings import (BASE_URL,
+                                        MAIL_KEY,
+                                        MAIL_SECRET,
+                                        MAIL_SENT_FROM)
 
 
 log = logging.getLogger(__name__)
@@ -19,10 +22,10 @@ class Mail(object):
         """
         Mail object as Interface
         """
-        self.site_url = config['ckan.site_url']
-        self.user_key = toolkit.config.get(u'ckan.mail.key')
-        self.user_secret = toolkit.config.get(u'ckan.mail.secret')
-        self.sent_from = toolkit.config.get(u'ckan.mail.sent_from')
+        self.site_url = BASE_URL
+        self.user_key = MAIL_KEY
+        self.user_secret = MAIL_SECRET
+        self.sent_from = MAIL_SENT_FROM
         self.sent_from = self.sent_from if self.sent_from else self.user_key
 
     @abstractmethod
@@ -50,7 +53,7 @@ class GoogleMail(Mail):
 
     def send(self, to, subject, email_data, snippet='email/base.html', footer=True, logo=True):
         # TODO: Create constant and make logo path configurable
-        email_data['logo'] = config.get('ckan.site_url') + '/assets/jh_logo.png'
+        email_data['logo'] = BASE_URL + '/assets/jh_logo.png'
         email_data['footer'] = footer
 
         body_html = mailer.render_jinja2(snippet, email_data)
@@ -70,7 +73,7 @@ class GoogleMail(Mail):
             server.login(self.user_key, self.user_secret)
             server.sendmail(self.sent_from, to, msg.as_string())
             log.info("Sent mail successfully")
-        except smtplib.SMTPException, e:
+        except smtplib.SMTPException as e:
             msg = '%r' % e
             log.exception(msg)
             raise MailerException(msg)
