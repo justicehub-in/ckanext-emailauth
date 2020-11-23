@@ -15,7 +15,6 @@ import ckan.lib.navl.dictization_functions as df
 import ckan.lib.navl.dictization_functions as dictization_functions
 import ckan.logic as logic
 import ckan.model as model
-from ckan.plugins import toolkit
 import ckanext.emailauth.helpers.tokens as tokens
 import ckanext.emailauth.helpers.user_extra as ue_helpers
 import ckanext.emailauth.logic.schema as user_reg_schema
@@ -73,7 +72,7 @@ def name_validator_with_changed_msg(val, context):
         raise invalid
 
 
-class ValidationLogic(object):
+class ValidationController(UserController):
     LoginFailedStatus = _('Login failed. Bad username or password.')
     NotAuthorizedStatus = json.dumps({'success': False, 'error': {'message': _('Unauthorized to create user')}})
     UserNotFoundStatus = json.dumps({'success': False, 'error': {'message': 'User not found'}})
@@ -279,19 +278,20 @@ class ValidationLogic(object):
         context = {'model': model, 'session': model.Session, 'user': c.user or c.author, 'auth_user_obj': c.userobj}
         data_dict = {'token': token,
                      'extras': [{'key': user_model.USER_VALIDATED_STATUS, 'new_value': 'True'}]}
-        template_data = ue_helpers.get_login(True, "")
         try:
             check_access('user_can_validate', context, data_dict)
             tokens.token_update(context, data_dict)
         except NotAuthorized:
-            template_data['data']['message'] = "User is already Validated"
-            return render(TEMPLATES['home'], extra_vars=template_data)
+            message = "User is already Validated"
+            h.flash_error(_(message))
+            h.redirect_to('/login')
         except ValidationError as e:
-            template_data['data']['message'] = e.error_summary
-            return render(TEMPLATES['home'], extra_vars=template_data)
+            message = e.error_summary
+            h.flash_error(_(message))
+            h.redirect_to('/login')
 
-        # TODO: It should redirect, much better
-        return render(TEMPLATES['home'], extra_vars=template_data)
+        h.flash_error(_('Your account is successfully validated'))
+        h.redirect_to('/login')
 
     def register(self, data=None, errors=None, error_summary=None):
         context = {'model': model, 'session': model.Session, 'user': c.user}
@@ -393,7 +393,3 @@ class ValidationLogic(object):
                 except:
                     return self.ResetLinkErrorStatus
         return render(TEMPLATES['home'])
-
-
-class ValidationController(UserController, ValidationLogic):
-    pass
