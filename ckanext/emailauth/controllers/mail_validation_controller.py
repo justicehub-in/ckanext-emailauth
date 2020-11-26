@@ -25,7 +25,8 @@ from ckan.common import _, c, request
 from ckan.logic.validators import name_validator, name_match, PACKAGE_NAME_MAX_LENGTH
 from ckanext.emailauth.authenticator import EmailAuthenticator
 from ckanext.emailauth.settings import IS_FLASK_REQUEST, BASE_URL
-
+import ckan.lib.mailer as mailer
+from six import text_type
 
 if sys.version_info[0] > 2:
     from urllib.parse import urljoin, quote
@@ -36,7 +37,6 @@ else:
     from urllib2 import quote
     from ckan.controllers.user import UserController
     from ckan.common import response
-
 
 _validate = dictization_functions.validate
 log = logging.getLogger(__name__)
@@ -151,7 +151,7 @@ class ValidationController(UserController):
             err = _('Login failed. Bad username or password.')
 
             template_data = ue_helpers.get_login(False)
-            h.flash_success(err)
+            h.flash_error(err)
             log.error("Status code 401 : username or password incorrect")
             return render(TEMPLATES['home'], extra_vars=template_data)
 
@@ -290,7 +290,7 @@ class ValidationController(UserController):
             h.flash_error(_(message))
             h.redirect_to('/login')
 
-        h.flash_error(_('Your account is successfully validated'))
+        h.flash_success(_('Your account is successfully validated'))
         h.redirect_to('/login')
 
     def register(self, data=None, errors=None, error_summary=None):
@@ -393,3 +393,79 @@ class ValidationController(UserController):
                 except:
                     return self.ResetLinkErrorStatus
         return render(TEMPLATES['home'])
+
+    def _get_form_password(self):
+        if IS_FLASK_REQUEST:
+            request_data = request.form
+        else:
+            request_data = request.params
+        data_dict = logic.clean_dict(unflatten(logic.tuplize_dict(logic.parse_params(request_data))))
+
+        password1 = data_dict['password1']
+        password2 = data_dict['password2']
+        if password1 is not None and password1 != '':
+            if not len(password1) >= 4:
+                raise ValueError(_('Your password must be 4 '
+                                   'characters or longer.'))
+            elif not password1 == password2:
+                raise ValueError(_('The passwords you entered'
+                                   ' do not match.'))
+            return password1
+        raise ValueError(_('You must provide a password'))
+
+    def perform_reset(self, id):
+        context = {'model': model, 'session': model.Session,
+                   'user': id,
+                   'keep_email': True}
+
+        try:
+            check_access('user_reset', context)
+        except NotAuthorized:
+            abort(403, _('Unauthorized to reset password.'))
+
+        try:
+            data_dict = {'id': id}
+            user_dict = get_action('user_show')(context, data_dict)
+
+            user_obj = context['user_obj']
+        except NotFound as e:
+            abort(404, _('User not found'))
+
+        c.reset_key = request.params.get('key')
+        if not mailer.verify_reset_link(user_obj, c.reset_key):
+            h.flash_error(_('Invalid reset key. Please try again.'))
+            abort(403)
+
+        if request.method == 'POST':
+            try:
+                context['reset_password'] = True
+                user_state = user_dict['state']
+                new_password = self._get_form_password()
+                user_dict['password'] = new_password
+                username = request.params.get('name')
+                if username is not None and username != '':
+                    user_dict['name'] = username
+                user_dict['reset_key'] = c.reset_key
+                user_dict['state'] = model.State.ACTIVE
+                user = get_action('user_update')(context, user_dict)
+                mailer.create_reset_key(user_obj)
+
+                h.flash_error(_('Password successfully changed'))
+                return self.SuccessStatus
+            except NotAuthorized:
+                return self.NotAuthorizedStatus
+            except NotFound as e:
+                return self.UserNotFoundStatus
+            except DataError:
+                return self.error_message("Data error")
+            except ValidationError as e:
+                return self.ValidationErrorStatus
+            except ValueError as ve:
+                return self.error_message("Incorrect Value")
+            user_dict['state'] = user_state
+
+            return self.error_message("Not Authorized")
+
+        c.user_dict = user_dict
+        template_data = ue_helpers.get_reset(True, "")
+        return render(TEMPLATES['home'], extra_vars=template_data)

@@ -22,6 +22,7 @@ USER_ORG_STATUS = 'org'
 USER_FRIENDS_STATUS = 'friends'
 PLATFORM_LOGIN = 'platform_login'
 PLATFORM_REGISTER = 'platform_register'
+PLATFORM_RESET = 'platform_reset'
 PLATFORM_LOGOUT = 'platform_logout'
 PLATFORM_FIRST_NAME = "platform_first_name"
 PLATFORM_LAST_NAME = "platform_last_name"

@@ -52,11 +52,17 @@ def get_user_extra(user_id=None):
 def get_login(success=True, message=None):
     return get_current_step_dict(user_model.PLATFORM_LOGIN, success, message)
 
+
 def get_register(success=True, message=None):
     return get_current_step_dict(user_model.PLATFORM_REGISTER, success, message)
 
+
 def get_logout(success=True, message=None):
     return get_current_step_dict(user_model.PLATFORM_LOGOUT, success, message)
+
+
+def get_reset(success=True, message=None):
+    return get_current_step_dict(user_model.PLATFORM_RESET, success, message)
 
 
 def get_current_step_dict(step, success=True, message=None):

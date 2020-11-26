@@ -1,6 +1,5 @@
 import ckan.plugins as plugins
 
-
 TEMPLATES = {
     "home": "home/index.html",
 }
@@ -35,7 +34,11 @@ BLUEPRINT = {
          'type': [u'GET', u'POST']},
         {'url': u'/login',
          'name': 'new_login',
-         'type': [u'GET']}
+         'type': [u'GET']},
+        {'url': u'/user/reset/{id}',
+         'name': 'perform_reset',
+         'action': [u'GET', u'POST']
+         }
     ]
 }
 
@@ -51,6 +54,7 @@ PASSWORD_RESET_EXPIRY = int(plugins.toolkit.config.get('password.reset_key.expir
 MAIL_KEY = plugins.toolkit.config.get(u'ckan.mail.key')
 MAIL_SECRET = plugins.toolkit.config.get(u'ckan.mail.secret')
 MAIL_SENT_FROM = plugins.toolkit.config.get(u'ckan.mail.sent_from')
+
 
 # Temporary UserController
 class UserController(object):
