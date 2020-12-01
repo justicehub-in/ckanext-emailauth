@@ -37,7 +37,7 @@ BLUEPRINT = {
          'type': [u'GET']},
         {'url': u'/user/reset/{id}',
          'name': 'perform_reset',
-         'action': [u'GET', u'POST']
+         'type': [u'GET', u'POST']
          }
     ]
 }
