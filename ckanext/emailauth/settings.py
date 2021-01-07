@@ -38,7 +38,11 @@ BLUEPRINT = {
         {'url': u'/user/reset/{id}',
          'name': 'perform_reset',
          'type': [u'GET', u'POST']
-         }
+         },
+        {'url': u'/message/success',
+         'name': 'message_dataset_success',
+         'type': [u'GET']
+        }
     ]
 }
 

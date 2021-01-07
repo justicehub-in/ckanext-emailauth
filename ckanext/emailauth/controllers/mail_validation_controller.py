@@ -110,6 +110,11 @@ class ValidationController(UserController):
             template_data = ue_helpers.get_login(True, "")
         return render(TEMPLATES["home"], extra_vars=template_data)
 
+    def message_dataset_success(self, error=None, info_message=None, page_subtitle=None):
+        template_data = {}
+        template_data = ue_helpers.get_dataset_success(True, "")
+        return render(TEMPLATES["home"], extra_vars=template_data)
+
     def logged_in(self):
         came_from = request.params.get('came_from', '')
         if h.url_is_local(came_from):

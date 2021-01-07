@@ -49,6 +49,10 @@ def get_user_extra(user_id=None):
     return result
 
 
+def get_dataset_success(success=True, message=None):
+    return get_current_step_dict(user_model.MESSAGE_DATASET_SUCCESS, success, message)
+
+
 def get_login(success=True, message=None):
     return get_current_step_dict(user_model.PLATFORM_LOGIN, success, message)
 
