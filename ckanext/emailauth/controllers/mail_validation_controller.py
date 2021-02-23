@@ -152,7 +152,7 @@ class ValidationController(UserController):
                     h.redirect_to(_came_from)
 
                 h.flash_success(_("%s is now logged in") % user_dict['display_name'])
-                h.redirect_to("/dashboard", locale=None)
+                h.redirect_to("/", locale=None)
         else:
             err = _('Login failed. Bad username or password.')
 
