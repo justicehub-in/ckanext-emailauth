@@ -27,6 +27,7 @@ from ckanext.emailauth.authenticator import EmailAuthenticator
 from ckanext.emailauth.settings import IS_FLASK_REQUEST, BASE_URL
 import ckan.lib.mailer as mailer
 from six import text_type
+from ckan.lib.mailer import mail_recipient
 
 if sys.version_info[0] > 2:
     from urllib.parse import urljoin, quote
@@ -243,6 +244,10 @@ class ValidationController(UserController):
             reset_link = urljoin(BASE_URL, "/user/validate/" + token['token'])
             mail = Mail.new()
             mail.send(user['email'], "Please verify your account", {'token': reset_link})
+
+        mail_recipient('JusticeHub Team', 'info@justicehub.in', 'JH | User created',
+                       'User created: {0}'
+                       .format(user["email"]))
 
         c.user = save_user
 
