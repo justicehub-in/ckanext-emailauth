@@ -49,8 +49,8 @@ def get_user_extra(user_id=None):
     return result
 
 
-def get_dataset_success(success=True, message=None):
-    return get_current_step_dict(user_model.MESSAGE_DATASET_SUCCESS, success, message)
+def get_dataset_success(success=True, message=None, link=None):
+    return get_current_step_dict(user_model.MESSAGE_DATASET_SUCCESS, success, message, link)
 
 
 def get_login(success=True, message=None):
@@ -69,7 +69,7 @@ def get_reset(success=True, message=None):
     return get_current_step_dict(user_model.PLATFORM_RESET, success, message)
 
 
-def get_current_step_dict(step, success=True, message=None):
+def get_current_step_dict(step, success=True, message=None, link=None):
     result = {
         'data': {
             'current_step': step,
@@ -77,6 +77,8 @@ def get_current_step_dict(step, success=True, message=None):
             'message': message
         }
     }
+    if link:
+        result['data']['link'] = "/dataset/{0}".format(link)
     return result
 
 

@@ -113,8 +113,9 @@ class ValidationController(UserController):
 
     def message_dataset_success(self, error=None, info_message=None, page_subtitle=None):
         template_data = {}
-        message       = request.params.get('message', '')
-        template_data = ue_helpers.get_dataset_success(True, message)
+        message = request.params.get('message', '')
+        dataset = request.params.get('dataset', '')
+        template_data = ue_helpers.get_dataset_success(True, message, dataset)
         return render(TEMPLATES["home"], extra_vars=template_data)
 
     def logged_in(self):
