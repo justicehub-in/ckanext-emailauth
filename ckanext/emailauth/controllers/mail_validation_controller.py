@@ -245,7 +245,8 @@ class ValidationController(UserController):
             # Send validation email
             reset_link = urljoin(BASE_URL, "/user/validate/" + token['token'])
             mail = Mail.new()
-            mail.send(user['email'], "Please verify your account", {'token': reset_link})
+            mail.send(user['email'], "Please verify your account", {'token': reset_link, 'name': user['fullname']
+                                                                    if user['fullname'] else user['name']})
 
         mail_recipient('JusticeHub Team', 'info@justicehub.in', 'JH | User created',
                        'User created: {0}'

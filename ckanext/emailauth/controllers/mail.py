@@ -54,7 +54,7 @@ class GoogleMail(Mail):
     def send(self, to, subject, email_data, snippet='email/base.html', footer=True, logo=True):
         # TODO: Create constant and make logo path configurable
         email_data['logo'] = BASE_URL + '/assets/jh_logo.png'
-        email_data['footer'] = footer
+        email_data['footer'] = False
 
         body_html = mailer.render_jinja2(snippet, email_data)
         msg = MIMEMultipart()
