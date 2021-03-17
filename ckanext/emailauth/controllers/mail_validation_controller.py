@@ -472,7 +472,7 @@ class ValidationController(UserController):
             except DataError:
                 return self.error_message("Data error")
             except ValidationError as e:
-                return self.ValidationErrorStatus
+                return self.error_message(u'%r' % e.error_dict) #self.ValidationErrorStatus
             except ValueError as ve:
                 return self.error_message("Incorrect Value")
             user_dict['state'] = user_state
